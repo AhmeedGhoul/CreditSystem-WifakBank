@@ -3,10 +3,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto, UserLoginDto } from './dto/UserDto.dto';
 import * as argon from 'argon2';
 import { PrismaClientKnownRequestError } from 'generated/prisma/runtime/library';
-
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { Role } from '../../generated/prisma';
 @Injectable()
 export class UserService {
-  constructor(private prisma:PrismaService) {
+  constructor(private prisma:PrismaService,private jwt : JwtService,private config:ConfigService) {
     }
 
   async signup(dto: CreateUserDto) {
@@ -45,18 +47,23 @@ export class UserService {
     }
   }
 
-  async signin(dto:UserLoginDto){
-  const user=await this.prisma.user.findUnique({where:{email:dto.email}});
+  async signin(dto: UserLoginDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      include: { roles: true },
+    });
 
+    if (!user) {
+      throw new ForbiddenException("Incorrect credentials");
+    }
 
-  if(!user){
-    throw new ForbiddenException("incorrect credentials")
+    const isPasswordValid = await argon.verify(user.password, dto.password);
+    if (!isPasswordValid) {
+      throw new ForbiddenException("Incorrect credentials");
+    }
+    const roleNames = user.roles.map(role => role.name);
+    return this.signToken(user.userId, roleNames);
   }
-  const pass= await  argon.verify(user.password,dto.password)
-if(!pass)
-  throw new ForbiddenException("incorrect credentials")
-return user;
-}
 async editUser(dto:UpdateUserDto,userId:number){
     const  user=await this.prisma.user.findUnique({where:{
       userId:userId
@@ -113,4 +120,22 @@ async grantRole(userid:number, roleName: string){
       },
       include: { roles: true },
     });}
+  async signToken(userId: number, roles: string[]): Promise<{ access_token: string }> {
+    const payload = {
+      sub: userId,
+      roles,
+    };
+
+    const secret = this.config.get<string>("JWT_SECRET_KEY");
+    const token = await this.jwt.signAsync(payload, {
+      expiresIn: '15m',
+      secret,
+    });
+
+    return {
+      access_token: token,
+    };
+  }
+
+
 }

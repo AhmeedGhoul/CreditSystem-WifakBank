@@ -52,24 +52,23 @@ model Audit {
   auditDate   DateTime    @default(now())
   auditType   AuditType
 
-  activityLog   ActivityLog @relation(fields: [activityLogId], references: [activityLogId])
-  activityLogId Int         @unique
+  activityLogs ActivityLog[] // One-to-many: Audit → ActivityLog[]
 
   Fraud_Case Fraud_Case[]
 }
 
 model ActivityLog {
   activityLogId          Int      @id @default(autoincrement())
-  activityLogName        String   @db.VarChar(255)
-  activityLogDescription String   @db.Text
+  activityLogName        String
+  activityLogDescription String
   activityDate           DateTime @default(now())
-  ipAddress              String   @db.VarChar(45)
-  country                String   @db.VarChar(100)
+  ipAddress              String
+  country                String
 
-  User       User? @relation(fields: [userUserId], references: [userId])
+  auditId    Int?
+  audit      Audit? @relation(fields: [auditId], references: [auditId])
+  User       User?  @relation(fields: [userUserId], references: [userId])
   userUserId Int?
-
-  Audit Audit?
 }
 
 model Fraud_Case {
