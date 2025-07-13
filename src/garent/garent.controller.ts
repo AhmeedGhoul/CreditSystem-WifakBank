@@ -8,7 +8,7 @@ import {
   Param,
   ParseIntPipe,
   Patch,
-  Post, Put,
+  Post, Put, Query,
   Request,
   Res,
   UseGuards,
@@ -36,15 +36,10 @@ export class GarentController {
     const user = req.user as JwtUser;
     return this.garentService.createGarent(dto, user.userId);
   }
-
-  @Get()
-  async getGarent(
-    @Request() req: ExpressRequest,
-    @Res() res: Response
-  ) {
+  @Get('search')
+  getGarents(@Query() query: any, @Request() req: ExpressRequest) {
     const user = req.user as JwtUser;
-    const data = await this.garentService.getGarents(user);
-    return res.status(200).json({ status: 'success', data });
+    return this.garentService.searchGarents(query, user);
   }
 
   @Delete('delete/:id')

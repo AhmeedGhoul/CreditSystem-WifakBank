@@ -8,7 +8,7 @@ import {
   Param,
   ParseIntPipe,
   Patch,
-  Post,
+  Post, Query,
   Request,
   Res,
   UseGuards,
@@ -38,15 +38,10 @@ export class CreditpoolpaymentController {
     return this.creditpoolpaymentService.createCreditPoolPayment(dto, contractId, user);
   }
 
-  @Get('by-contract/:contractId')
-  async getCreditPoolPayments(
-    @Param('contractId', ParseIntPipe) contractId: number,
-    @Request() req: ExpressRequest,
-    @Res() res: Response
-  ) {
+  @Get('credit-pool-payments/search')
+  getCreditPoolPayments(@Query() query: any, @Request() req: ExpressRequest) {
     const user = req.user as JwtUser;
-    const data = await this.creditpoolpaymentService.getCreditPoolPaymentsByContract(contractId, user);
-    return res.status(200).json({ status: 'success', data });
+    return this.creditpoolpaymentService.searchCreditPoolPayments(query, user);
   }
 
   @Delete('delete/:id')

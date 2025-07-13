@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -8,10 +9,11 @@ import {
   Param,
   ParseIntPipe,
   Patch,
-  Post, Put,
+  Post, Put, Query,
   Request,
   Res,
-  UseGuards,
+  UploadedFile,
+  UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { Response, Request as ExpressRequest } from 'express';
 import { Roles } from '../decorator/roles.decorator';
@@ -20,31 +22,60 @@ import { RolesGuard } from '../user/Roles.guard';
 import { JwtUser } from '../user/strategy/jwt-user.interface';
 import { ContractService } from './contract.service';
 import { CreateContractDto } from './dto/ContractDto.dto';
-
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { CreditPoolService } from './credit_pool/credit_pool.service';
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles('Client', 'Admin')
 @Controller('contract')
 export class ContractController {
-  constructor(private contractService: ContractService) {}
+  constructor(private contractService: ContractService,private creditPoolService: CreditPoolService) {}
 
-  @Post('add')
-  @HttpCode(HttpStatus.OK)
-  addContract(
-    @Body() dto: CreateContractDto,
-    @Request() req: ExpressRequest
-  ) {
-    const user = req.user as JwtUser;
-    return this.contractService.createContract(dto, user.userId);
+
+@Post('add')
+@HttpCode(HttpStatus.CREATED)
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles('Client', 'Admin')
+@UseInterceptors(FileInterceptor('file', {
+  storage: diskStorage({
+    destination: './uploads/contracts',
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now();
+      const ext = extname(file.originalname) || '.pdf';
+      const finalName = `contract_${uniqueSuffix}${ext}`;
+      cb(null, finalName);
+    },
+  }),
+}))
+async addContract(
+  @Body('dto') dtoString: string,
+@UploadedFile() file: Express.Multer.File,
+@Request() req: ExpressRequest
+) {
+  const user = req.user as JwtUser;
+  const dto: CreateContractDto = JSON.parse(dtoString);
+
+  if (!file) throw new BadRequestException('PDF contract file is required');
+
+  const pdfUrl = `/uploads/contracts/${file.filename}`;
+
+  const contract = await this.contractService.createContract(dto, user.userId, pdfUrl);
+
+  await this.creditPoolService.isFullCreditPool(dto.creditPoolId);
+
+  return contract;
+}
+  @Get('user/:id')
+  getUserContracts(@Param('id') id: number) {
+    return this.contractService.findByUserId(+id);
   }
 
-  @Get()
-  async getContract(
-    @Request() req: ExpressRequest,
-    @Res() res: Response
-  ) {
+
+  @Get('search')
+  getContracts(@Query() query: any, @Request() req: ExpressRequest) {
     const user = req.user as JwtUser;
-    const data = await this.contractService.getContracts(user);
-    return res.status(200).json({ status: 'success', data });
+    return this.contractService.searchContracts(query, user);
   }
 
   @Delete('delete/:id')

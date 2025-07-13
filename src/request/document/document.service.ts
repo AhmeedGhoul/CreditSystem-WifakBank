@@ -11,24 +11,7 @@ import { JwtUser } from '../../user/strategy/jwt-user.interface';
 export class DocumentService {
   constructor(private prisma: PrismaService) {}
 
-  async createDocument(dto: CreateDocumentDto, requestId: number, user: JwtUser) {
-    const request = await this.prisma.request.findUnique({
-      where: { requestId },
-    });
 
-    if (!request) throw new NotFoundException('Request not found');
-
-    if (!user.roles.includes('Admin') && request.userUserId !== user.userId) {
-      throw new ForbiddenException('You cannot add documents to a request that is not yours');
-    }
-
-    return this.prisma.document.create({
-      data: {
-        ...dto,
-        requestId: requestId,
-      },
-    });
-  }
 
   async editDocument(dto: CreateDocumentDto, documentId: number, user: JwtUser) {
     const document = await this.prisma.document.findUnique({
@@ -63,19 +46,44 @@ export class DocumentService {
     return this.prisma.document.delete({ where: { documentId } });
   }
 
-  async getDocumentsByRequest(requestId: number, user: JwtUser) {
-    const request = await this.prisma.request.findUnique({
-      where: { requestId },
-    });
-
+  async searchDocuments(query: {
+    requestId: number;
+    isApproved?: boolean;
+    startDate?: string;
+    endDate?: string;
+    sortBy?: string | string[];
+    page?: string;
+    size?: string;
+  }, user: JwtUser) {
+    const { requestId, isApproved, startDate, endDate, sortBy, page = '1', size = '10' } = query;
+    const request = await this.prisma.request.findUnique({ where: { requestId } });
     if (!request) throw new NotFoundException('Request not found');
+    if (!user.roles.includes('Admin') && request.userUserId !== user.userId)
+      throw new ForbiddenException('Access denied');
 
-    if (!user.roles.includes('Admin') && request.userUserId !== user.userId) {
-      throw new ForbiddenException('You can only view documents linked to your own request');
+    const pageNum = parseInt(page, 10);
+    const sizeNum = parseInt(size, 10);
+    const skip = (pageNum - 1) * sizeNum;
+
+    const filters: any = { requestId };
+    if (isApproved !== undefined) filters.isApproved = isApproved;
+    if (startDate || endDate) {
+      filters.documentDate = {};
+      if (startDate) filters.documentDate.gte = new Date(startDate);
+      if (endDate) filters.documentDate.lte = new Date(endDate);
     }
 
-    return this.prisma.document.findMany({
-      where: { requestId },
+    const orderBy = (typeof sortBy === 'string' ? [sortBy] : sortBy || []).map(f => {
+      const [key, dir = 'asc'] = f.split(':');
+      return { [key]: dir.toLowerCase() === 'desc' ? 'desc' : 'asc' };
     });
+
+    const [data, total] = await Promise.all([
+      this.prisma.document.findMany({ where: filters, skip, take: sizeNum, orderBy }),
+      this.prisma.document.count({ where: filters }),
+    ]);
+
+    return { data, total, page: pageNum, size: sizeNum, totalPages: Math.ceil(total / sizeNum) };
   }
+
 }

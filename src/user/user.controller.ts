@@ -8,27 +8,26 @@ import {
   Param,
   ParseIntPipe,
   Patch,
-  Post,
+  Post, Query, Request,
   Res, UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { Response } from 'express';
+import { Request as ExpressRequest, Response } from 'express';
 import { CreateUserDto, GrantRoleDto, UpdateUserDto, UserLoginDto } from './dto/UserDto.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from './Roles.guard';
 import { Roles } from '../decorator/roles.decorator';
+import { JwtUser } from './strategy/jwt-user.interface';
 
 @Controller('user')
 export class UserController {
   constructor(private userService:UserService) {
   }
-  @Roles('Admin')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
 
-  @Get()
-  async getUsers(@Res() res: Response) {
-    const data = await this.userService.getUsers();
-    return res.status(200).json({ status: 'success', data });
+
+  @Get('users/search')
+  getUsers(@Query() query: any) {
+    return this.userService.searchUsers(query);
   }
   @Post('signup')
   signup(@Body() dto: CreateUserDto) {
@@ -36,19 +35,43 @@ export class UserController {
   }
   @HttpCode(HttpStatus.OK)
   @Post('signin')
-  signin(@Body() dto:UserLoginDto){
-    return this.userService.signin(dto)}
+  async signin(
+    @Body() dto: UserLoginDto,
+    @Res({ passthrough: true }) res: Response
+  ) {
+    const { access_token } = await this.userService.signin(dto);
+
+    res.cookie('access_token', access_token, {
+      httpOnly: false,
+      secure: false,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+
+    return { message: 'Login successful' };
+  }
+  @Post('logout')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin')
+  logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+    });
+    return { message: 'Logout successful' };
+  }
+  @HttpCode(HttpStatus.OK)
+
   @Delete('delete/:id')
   deleteUser(@Param('id',ParseIntPipe)userId:number){
     return this.userService.deleteUser(userId);
   }
   @HttpCode(HttpStatus.OK)
   @Patch('modify/:id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin')
+
   modifyUser(
     @Param('id',ParseIntPipe) userId: number,
     @Body() dto: UpdateUserDto,
@@ -60,11 +83,18 @@ export class UserController {
   promoteUser(@Param('id',ParseIntPipe)userId:number,@Body()dto:GrantRoleDto){
     return this.userService.grantRole(userId,dto.roleName)
 }
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin')
+
   @HttpCode(HttpStatus.OK)
   @Post('demote/:id')
   demoteUser(@Param('id',ParseIntPipe)userId:number,@Body()dto:GrantRoleDto){
     return this.userService.DemoteRole(userId,dto.roleName)
+  }
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @HttpCode(HttpStatus.OK)
+  @Get('has-access')
+  async checkUserAccess(@Request() req: ExpressRequest) {
+    const user = req.user as JwtUser;
+    const hasAccess = await this.userService.userHasAccess(user.userId);
+    return { hasAccess };
   }
 }

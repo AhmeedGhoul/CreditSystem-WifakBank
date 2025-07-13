@@ -47,13 +47,47 @@ export class AccountService {
     return this.prisma.account.delete({ where: { accountId } });
   }
 
-  async getAccounts(user: JwtUser) {
-    if (user.roles.includes('Admin')) {
-      return this.prisma.account.findMany();
+  async searchAccounts(query: {
+    minAmount?: number;
+    maxAmount?: number;
+    trackingNumber?: number;
+    startDate?: string;
+    endDate?: string;
+    sortBy?: string | string[];
+    page?: string;
+    size?: string;
+  }, user: JwtUser) {
+    const { minAmount, maxAmount, trackingNumber, startDate, endDate, sortBy, page = '1', size = '10' } = query;
+
+    const pageNum = parseInt(page, 10);
+    const sizeNum = parseInt(size, 10);
+    const skip = (pageNum - 1) * sizeNum;
+
+    const filters: any = {};
+    if (!user.roles.includes('Admin')) filters.linkedUserId = user.userId;
+    if (trackingNumber) filters.trackingNumber = trackingNumber;
+    if (minAmount !== undefined || maxAmount !== undefined) {
+      filters.amount = {};
+      if (minAmount !== undefined) filters.amount.gte = Number(minAmount);
+      if (maxAmount !== undefined) filters.amount.lte = Number(maxAmount);
+    }
+    if (startDate || endDate) {
+      filters.openDate = {};
+      if (startDate) filters.openDate.gte = new Date(startDate);
+      if (endDate) filters.openDate.lte = new Date(endDate);
     }
 
-    return this.prisma.account.findMany({
-      where: { linkedUserId: user.userId },
+    const orderBy = (typeof sortBy === 'string' ? [sortBy] : sortBy || []).map(s => {
+      const [key, dir = 'asc'] = s.split(':');
+      return { [key]: dir.toLowerCase() === 'desc' ? 'desc' : 'asc' };
     });
+
+    const [data, total] = await Promise.all([
+      this.prisma.account.findMany({ where: filters, skip, take: sizeNum, orderBy }),
+      this.prisma.account.count({ where: filters }),
+    ]);
+
+    return { data, total, page: pageNum, size: sizeNum, totalPages: Math.ceil(total / sizeNum) };
   }
+
 }

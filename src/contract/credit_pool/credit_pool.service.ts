@@ -12,8 +12,17 @@ export class CreditPoolService {
   constructor(private prisma: PrismaService) {}
 
   async createCreditPool(dto: CreateCreditPoolDto) {
+    const { Period, Frequency, ...rest } = dto;
+
+    const computedMaxPeople = Math.round(Period / Frequency);
+
     return this.prisma.credit_Pool.create({
-      data: { ...dto },
+      data: {
+        ...rest,
+        Period,
+        Frequency,
+        maxPeople: computedMaxPeople,
+      },
     });
   }
 
@@ -39,19 +48,52 @@ export class CreditPoolService {
     return this.prisma.credit_Pool.delete({ where: { creditPoolId } });
   }
 
-  async getCreditPools() {
-    return this.prisma.credit_Pool.findMany();
-  }
+  async searchCreditPools(query: {
+    minValue?: number;
+    maxValue?: number;
+    isFull?: boolean;
+    sortBy?: string | string[];
+    page?: string;
+    size?: string;
+  }) {
+    const { minValue, maxValue, isFull, sortBy, page = '1', size = '10' } = query;
+    const pageNum = parseInt(page, 10);
+    const sizeNum = parseInt(size, 10);
+    const skip = (pageNum - 1) * sizeNum;
 
-  async getContractsByCreditPool(creditPoolId: number, user: JwtUser) {
-    if (!user.roles.includes('Admin')) {
-      throw new ForbiddenException('Only admin can view contracts by credit pool');
+    const filters: any = {};
+    if (isFull !== undefined) filters.isFull = isFull;
+    if (minValue !== undefined || maxValue !== undefined) {
+      filters.minValue = {};
+      if (minValue !== undefined) filters.minValue.gte = minValue;
+      if (maxValue !== undefined) filters.minValue.lte = maxValue;
     }
 
-    return this.prisma.contracts.findMany({
-      where: { creditPoolId },
+    const orderBy = (typeof sortBy === 'string' ? [sortBy] : sortBy || []).map(f => {
+      const [key, dir = 'asc'] = f.split(':');
+      return { [key]: dir.toLowerCase() === 'desc' ? 'desc' : 'asc' };
     });
+
+    const [data, total] = await Promise.all([
+      this.prisma.credit_Pool.findMany({
+        where: filters,
+        skip,
+        take: sizeNum,
+        orderBy,
+        include: {
+          contracts: {
+            select: {
+              userUserId: true,
+            },
+          },
+        },
+      }),
+      this.prisma.credit_Pool.count({ where: filters }),
+    ]);
+
+    return { data, total, page: pageNum, size: sizeNum, totalPages: Math.ceil(total / sizeNum) };
   }
+
   async assignContractToCreditPool(
     contractId: number,
     creditPoolId: number,
@@ -84,6 +126,26 @@ export class CreditPoolService {
     return this.prisma.contracts.update({
       where: { contractId },
       data: { creditPoolId: null },
+    });
+  }
+  async isFullCreditPool(creditPoolId: number): Promise<void> {
+    const pool = await this.prisma.credit_Pool.findUnique({
+      where: { creditPoolId },
+      include: {
+        contracts: true,
+      },
+    });
+
+    if (!pool) throw new NotFoundException("Credit Pool not found");
+
+    const max = pool.maxPeople;
+    const currentCount = pool.contracts.length;
+
+    const isFull = currentCount >= max;
+
+    await this.prisma.credit_Pool.update({
+      where: { creditPoolId },
+      data: { isFull },
     });
   }
 }

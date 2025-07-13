@@ -22,3 +22,17 @@ export class CreateAuditDto {
   @IsInt({ each: true })
   activityLogIds: number[];
 }
+export class ModifyAuditDto {
+  @IsEnum(AuditStatus)
+  auditStatus?: AuditStatus;
+
+  @IsString()
+  auditOutput?: string;
+
+  @IsEnum(AuditType)
+  auditType?: AuditType;
+
+  @IsArray()
+  @IsInt({ each: true })
+  activityLogIds?: number[];
+}

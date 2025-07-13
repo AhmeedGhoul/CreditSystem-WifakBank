@@ -1,0 +1,16 @@
+-- AlterTable
+ALTER TABLE "Request" ADD COLUMN     "bankSavings" DOUBLE PRECISION,
+ADD COLUMN     "employmentStatus" TEXT,
+ADD COLUMN     "estimatedCarValue" DOUBLE PRECISION,
+ADD COLUMN     "estimatedHouseValue" DOUBLE PRECISION,
+ADD COLUMN     "existingLoans" BOOLEAN,
+ADD COLUMN     "hasCriminalRecord" BOOLEAN,
+ADD COLUMN     "monthlyIncome" DOUBLE PRECISION,
+ADD COLUMN     "monthlyLoanPayments" DOUBLE PRECISION,
+ADD COLUMN     "numberOfCars" INTEGER,
+ADD COLUMN     "numberOfHouses" INTEGER,
+ADD COLUMN     "otherAssets" TEXT,
+ADD COLUMN     "otherIncomeSources" TEXT,
+ADD COLUMN     "purpose" TEXT,
+ADD COLUMN     "totalLoanAmount" DOUBLE PRECISION,
+ADD COLUMN     "yearsOfEmployment" INTEGER;

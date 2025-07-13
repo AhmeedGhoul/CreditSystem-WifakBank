@@ -1,13 +1,19 @@
+import { RoleSeederService } from './user/role-seeder.service';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { RoleSeederService } from 'src/user/role-seeder.service';
+import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  const roleSeeder = app.get(RoleSeederService);
-  await roleSeeder.seedRoles(); // seed roles at startup
+  app.enableCors({
+    origin: 'http://localhost:3001',
+    credentials: true,
+  });
 
+  const roleSeeder = app.get(RoleSeederService);
+  await roleSeeder.seedRoles();
+  app.use(cookieParser());
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

@@ -1,13 +1,14 @@
+// src/contract/contract.module.ts
 import { Module } from '@nestjs/common';
 import { ContractController } from './contract.controller';
-import { CreditPoolPaymentController } from './credit_pool_payment/credit_pool_payment.controller';
-import { CreditPoolPaymentService } from './credit_pool_payment/credit_pool_payment.service';
-import { CreditPoolPaymentModule } from './credit_pool_payment/credit_pool_payment.module';
-import { CreditPoolModule } from './credit_pool/credit_pool.module';
+import { ContractService } from './contract.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreditPoolModule } from './credit_pool/credit_pool.module'; // ✅ Prisma is required in the service
 
 @Module({
-  controllers: [ContractController, CreditPoolPaymentController],
-  providers: [CreditPoolPaymentService],
-  imports: [CreditPoolPaymentModule, CreditPoolModule]
+  imports: [CreditPoolModule],
+  controllers: [ContractController],
+  providers: [ContractService, PrismaService], // ✅ ADD THIS LINE
+  exports: [ContractService], // Optional: only if used in another module
 })
 export class ContractModule {}

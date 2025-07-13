@@ -8,7 +8,7 @@ import {
   Param,
   ParseIntPipe,
   Patch,
-  Post,
+  Post, Query,
   Request,
   Res,
   UseGuards,
@@ -22,7 +22,7 @@ import { CreditPoolService } from './credit_pool.service';
 import { CreateCreditPoolDto } from './dto/CreditPool.dto';
 
 @UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('Admin')
+@Roles('Admin','Client','Agent')
 @Controller('creditpool')
 export class CreditPoolController {
   constructor(private creditPoolService: CreditPoolService) {}
@@ -33,21 +33,14 @@ export class CreditPoolController {
     return this.creditPoolService.createCreditPool(dto);
   }
 
-  @Get()
-  async getCreditPools(@Res() res: Response) {
-    const data = await this.creditPoolService.getCreditPools();
-    return res.status(200).json({ status: 'success', data });
-  }
-
-  @Get('contracts/:id')
-  async getContractsByCreditPool(
-    @Param('id', ParseIntPipe) creditPoolId: number,
-    @Request() req: ExpressRequest,
-    @Res() res: Response,
-  ) {
-    const user = req.user as JwtUser;
-    const data = await this.creditPoolService.getContractsByCreditPool(creditPoolId, user);
-    return res.status(200).json({ status: 'success', data });
+  @Get('search')
+  getCreditPools(@Query() query: any) {
+    if ('isFull' in query) {
+      if (query.isFull === 'true') query.isFull = true;
+      else if (query.isFull === 'false') query.isFull = false;
+      else query.isFull = undefined;
+    }
+    return this.creditPoolService.searchCreditPools(query);
   }
 
   @Patch('modify/:id')

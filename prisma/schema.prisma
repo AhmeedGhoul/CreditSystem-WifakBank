@@ -83,19 +83,39 @@ model Fraud_Case {
 
 model Document {
   documentId   Int      @id @default(autoincrement())
+  originalName String
+  filePath     String
+  mimeType     String
+  size         Int
   documentDate DateTime
-  isApproved   Boolean  @default(false)
   requestId    Int?
   Request      Request? @relation(fields: [requestId], references: [requestId])
 }
 
 model Request {
-  requestId         Int        @id @default(autoincrement())
-  requestDate       DateTime   @default(now())
-  isRequestApproved Boolean    @default(false)
-  User              User?      @relation(fields: [userUserId], references: [userId])
-  userUserId        Int?
-  Documents         Document[]
+  requestId                  Int      @id @default(autoincrement())
+  requestDate                DateTime @default(now())
+  isRequestApprovedByAgent   Boolean  @default(false)
+  isRequestApprovedByAuditor Boolean  @default(false)
+
+  purpose             String?
+  employmentStatus    Employment?
+  yearsOfEmployment   Int?
+  monthlyIncome       Float?
+  otherIncomeSources  String?
+  existingLoans       Boolean?
+  totalLoanAmount     Float?
+  monthlyLoanPayments Float?
+  numberOfHouses      Int?
+  estimatedHouseValue Float?
+  numberOfCars        Int?
+  estimatedCarValue   Float?
+  bankSavings         Float?
+  otherAssets         String?
+  hasCriminalRecord   Boolean?
+  User                User?       @relation(fields: [userUserId], references: [userId])
+  userUserId          Int?
+  Documents           Document[]
 }
 
 model Credit_Pool_Payment {
@@ -110,7 +130,8 @@ model Contracts {
   contractId   Int      @id @default(autoincrement())
   contractDate DateTime @default(now())
   amount       Float
-  deposit      Float
+  period       Int
+  pdfUrl       String?
 
   User       User? @relation(fields: [userUserId], references: [userId])
   userUserId Int?
@@ -121,14 +142,13 @@ model Contracts {
 }
 
 model Credit_Pool {
-  creditPoolId   Int         @id @default(autoincrement())
-  minValue       Float
-  maxValue       Float
-  isFull         Boolean     @default(false)
-  numberOfPeople Int         @default(0)
-  openDate       DateTime
-  closeDate      DateTime
-  contracts      Contracts[]
+  creditPoolId Int         @id @default(autoincrement())
+  maxPeople    Int         @default(0)
+  Frequency    Int         @default(1)
+  Period       Int         @default(3)
+  FinalValue   Int
+  isFull       Boolean     @default(false)
+  contracts    Contracts[]
 }
 
 model Garent {
@@ -171,6 +191,13 @@ enum AuditStatus {
   Paused
   APPROVED
   REJECTED
+}
+
+enum Employment {
+  Employed
+  Self_Employed
+  Unemployed
+  Student
 }
 
 enum CivilStatus {

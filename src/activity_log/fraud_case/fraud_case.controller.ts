@@ -9,7 +9,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
-  Put,
+  Put, Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -35,19 +35,9 @@ export class FraudCaseController {
     return this.fraudCaseService.createFraudCase(dto, auditId);
   }
 
-  @Get()
-  async getAll(@Res() res: Response) {
-    const data = await this.fraudCaseService.getFraudCases();
-    return res.status(200).json({ status: 'success', data });
-  }
-
-  @Get(':id')
-  async getOne(
-    @Param('id', ParseIntPipe) fraudCaseId: number,
-    @Res() res: Response
-  ) {
-    const data = await this.fraudCaseService.getFraudCaseById(fraudCaseId);
-    return res.status(200).json({ status: 'success', data });
+  @Get('search')
+  getFraudCases(@Query() query: any) {
+    return this.fraudCaseService.searchFraudCases(query);
   }
 
   @Put('modify/:id')

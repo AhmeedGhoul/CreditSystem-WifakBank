@@ -7,7 +7,7 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
-  Post,
+  Post, Query,
   Request,
   Res,
   UseGuards,
@@ -22,7 +22,7 @@ import { CreateActivityLogDto } from './dto/ActivityLogDto.dto';
 
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles('Admin', 'Client')
-@Controller('activity-log')
+@Controller('activitylog')
 export class ActivityLogController {
   constructor(private activityLogService: ActivityLogService) {}
 
@@ -36,15 +36,12 @@ export class ActivityLogController {
     return this.activityLogService.create(dto, user.userId);
   }
 
-  @Get()
-  async getAllActivities(
-    @Request() req: ExpressRequest,
-    @Res() res: Response,
-  ) {
+  @Get('search')
+  getLogs(@Query() query: any, @Request() req: ExpressRequest) {
     const user = req.user as JwtUser;
-    const data = await this.activityLogService.findAll(user);
-    return res.status(200).json({ status: 'success', data });
+    return this.activityLogService.searchActivityLogs(query, user);
   }
+
 
   @Delete('delete/:id')
   @HttpCode(HttpStatus.OK)

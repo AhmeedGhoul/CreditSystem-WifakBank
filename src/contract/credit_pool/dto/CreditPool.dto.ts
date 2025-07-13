@@ -1,29 +1,18 @@
-import {
-  IsBoolean,
-  IsDate,
-  IsNumber,
-  IsInt,
-} from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsInt, IsBoolean } from 'class-validator';
 
 export class CreateCreditPoolDto {
-  @IsNumber({}, { message: 'minValue must be a number' })
-  minValue: number;
+  @IsInt({ message: 'maxPeople must be an integer' })
+  maxPeople: number;
 
-  @IsNumber({}, { message: 'maxValue must be a number' })
-  maxValue: number;
+  @IsInt({ message: 'Frequency must be an integer' })
+  Frequency: number;
+
+  @IsInt({ message: 'Period must be an integer' })
+  Period: number;
+
+  @IsInt({ message: 'FinalValue must be an integer' })
+  FinalValue: number;
 
   @IsBoolean({ message: 'isFull must be a boolean' })
   isFull: boolean;
-
-  @IsInt({ message: 'numberOfPeople must be an integer' })
-  numberOfPeople: number;
-
-  @Type(() => Date)
-  @IsDate({ message: 'openDate must be a valid date' })
-  openDate: Date;
-
-  @Type(() => Date)
-  @IsDate({ message: 'closeDate must be a valid date' })
-  closeDate: Date;
 }

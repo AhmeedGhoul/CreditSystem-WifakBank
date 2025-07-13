@@ -9,7 +9,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
-  Put,
+  Put, Query,
   Request,
   Res,
   UseGuards,
@@ -17,42 +17,30 @@ import {
 import { Response, Request as ExpressRequest } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { AuditService } from './audit.service';
-import { CreateAuditDto } from './dto/AuditDto.dto';
+import { CreateAuditDto, ModifyAuditDto } from './dto/AuditDto.dto';
 import { RolesGuard } from '../../user/Roles.guard';
 import { Roles } from '../../decorator/roles.decorator';
 
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('Client', 'Admin')
-@Controller('audit')
+
+@Controller('Audit')
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
-
   @Post('add')
   @HttpCode(HttpStatus.OK)
   addAudit(@Body() dto: CreateAuditDto) {
     return this.auditService.createAudit(dto);
   }
+    @Get('search')
+    @HttpCode(HttpStatus.OK)
+    getAuditsWithFilter(@Query() query: any) {
+      return this.auditService.searchAudits(query);
+    }
 
-  @Get()
-  async getAudits(@Res() res: Response) {
-    const data = await this.auditService.getAudits();
-    return res.status(200).json({ status: 'success', data });
-  }
-
-  @Get(':id')
-  async getAuditById(
-    @Param('id', ParseIntPipe) auditId: number,
-    @Res() res: Response
-  ) {
-    const data = await this.auditService.getAuditById(auditId);
-    return res.status(200).json({ status: 'success', data });
-  }
-
-  @Put('modify/:id')
+  @Patch('modify/:id')
   @HttpCode(HttpStatus.OK)
   modifyAudit(
     @Param('id', ParseIntPipe) auditId: number,
-    @Body() dto: CreateAuditDto
+    @Body() dto: ModifyAuditDto
   ) {
     return this.auditService.editAudit(auditId, dto);
   }

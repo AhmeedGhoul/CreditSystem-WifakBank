@@ -47,13 +47,36 @@ export class GarentService {
     return this.prisma.garent.delete({ where: { garentId } });
   }
 
-  async getGarents(user: JwtUser) {
-    if (user.roles.includes('Admin')) {
-      return this.prisma.garent.findMany();
-    }
+  async searchGarents(query: {
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: number;
+    sortBy?: string | string[];
+    page?: string;
+    size?: string;
+  }, user: JwtUser) {
+    const { firstName, lastName, phoneNumber, sortBy, page = '1', size = '10' } = query;
+    const pageNum = parseInt(page, 10);
+    const sizeNum = parseInt(size, 10);
+    const skip = (pageNum - 1) * sizeNum;
 
-    return this.prisma.garent.findMany({
-      where: { userUserId: user.userId },
+    const filters: any = {};
+    if (!user.roles.includes('Admin')) filters.userUserId = user.userId;
+    if (firstName) filters.firstName = { contains: firstName, mode: 'insensitive' };
+    if (lastName) filters.lastName = { contains: lastName, mode: 'insensitive' };
+    if (phoneNumber) filters.phoneNumber = phoneNumber;
+
+    const orderBy = (typeof sortBy === 'string' ? [sortBy] : sortBy || []).map(f => {
+      const [key, dir = 'asc'] = f.split(':');
+      return { [key]: dir.toLowerCase() === 'desc' ? 'desc' : 'asc' };
     });
+
+    const [data, total] = await Promise.all([
+      this.prisma.garent.findMany({ where: filters, skip, take: sizeNum, orderBy }),
+      this.prisma.garent.count({ where: filters }),
+    ]);
+
+    return { data, total, page: pageNum, size: sizeNum, totalPages: Math.ceil(total / sizeNum) };
   }
+
 }

@@ -8,7 +8,7 @@ import {
   Param,
   ParseIntPipe,
   Patch,
-  Post,
+  Post, Query,
   Request,
   Res,
   UseGuards,
@@ -27,26 +27,12 @@ import { JwtUser } from '../../user/strategy/jwt-user.interface';
 export class DocumentController {
   constructor(private documentService: DocumentService) {}
 
-  @Post('add/:requestId')
-  @HttpCode(HttpStatus.OK)
-  addDocument(
-    @Param('requestId', ParseIntPipe) requestId: number,
-    @Body() dto: CreateDocumentDto,
-    @Request() req: ExpressRequest
-  ) {
-    const user = req.user as JwtUser;
-    return this.documentService.createDocument(dto, requestId, user);
-  }
 
-  @Get('by-request/:requestId')
-  async getDocuments(
-    @Param('requestId', ParseIntPipe) requestId: number,
-    @Request() req: ExpressRequest,
-    @Res() res: Response
-  ) {
+
+  @Get('documents/search')
+  getDocuments(@Query() query: any, @Request() req: ExpressRequest) {
     const user = req.user as JwtUser;
-    const data = await this.documentService.getDocumentsByRequest(requestId, user);
-    return res.status(200).json({ status: 'success', data });
+    return this.documentService.searchDocuments(query, user);
   }
 
   @Delete('delete/:id')

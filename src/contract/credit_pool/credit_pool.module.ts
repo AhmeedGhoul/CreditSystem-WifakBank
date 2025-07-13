@@ -4,6 +4,7 @@ import { CreditPoolController } from './credit_pool.controller';
 
 @Module({
   providers: [CreditPoolService],
-  controllers: [CreditPoolController]
+  controllers: [CreditPoolController],
+  exports:[CreditPoolService]
 })
 export class CreditPoolModule {}

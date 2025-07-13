@@ -8,7 +8,7 @@ import {
   Param,
   ParseIntPipe,
   Patch,
-  Post, Put,
+  Post, Put, Query,
   Request,
   Res,
   UseGuards,
@@ -37,15 +37,12 @@ export class AccountController {
     return this.accountService.createAccount(dto, user.userId);
   }
 
-  @Get()
-  async getAccount(
-    @Request() req: ExpressRequest,
-    @Res() res: Response
-  ) {
+  @Get('search')
+  getAccounts(@Query() query: any, @Request() req: ExpressRequest) {
     const user = req.user as JwtUser;
-    const data = await this.accountService.getAccounts(user);
-    return res.status(200).json({ status: 'success', data });
+    return this.accountService.searchAccounts(query, user);
   }
+
 
   @Delete('delete/:id')
   @HttpCode(HttpStatus.OK)

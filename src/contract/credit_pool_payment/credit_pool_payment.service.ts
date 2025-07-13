@@ -63,19 +63,43 @@ export class CreditpoolpaymentService {
     return this.prisma.credit_Pool_Payment.delete({ where: { creditPoolPaymentId:creditpoolpaymentId } });
   }
 
-  async getCreditPoolPaymentsByContract(contractId: number, user: JwtUser) {
-    const contract = await this.prisma.contracts.findUnique({
-      where: { contractId },
-    });
+  async searchCreditPoolPayments(query: {
+    contractId: number;
+    minAmount?: string;
+    maxAmount?: string;
+    date?: string;
+    sortBy?: string | string[];
+    page?: string;
+    size?: string;
+  }, user: JwtUser) {
+    const { contractId, minAmount, maxAmount, date, sortBy, page = '1', size = '10' } = query;
+    const contract = await this.prisma.contracts.findUnique({ where: { contractId } });
+    if (!contract) throw new NotFoundException('Contract not found');
+    if (!user.roles.includes('Admin') && contract.userUserId !== user.userId)
+      throw new ForbiddenException('Access denied');
 
-    if (!contract) throw new NotFoundException('contract not found');
-
-    if (!user.roles.includes('Admin') && contract.userUserId !== user.userId) {
-      throw new ForbiddenException('You can only view credit pool payments linked to your own contract');
+    const filters: any = { contractId };
+    if (minAmount || maxAmount) {
+      filters.amount = {};
+      if (minAmount) filters.amount.gte = minAmount;
+      if (maxAmount) filters.amount.lte = maxAmount;
     }
+    if (date) filters.date = { contains: date, mode: 'insensitive' };
 
-    return this.prisma.credit_Pool_Payment.findMany({
-      where: { contractId },
+    const pageNum = parseInt(page, 10);
+    const sizeNum = parseInt(size, 10);
+    const skip = (pageNum - 1) * sizeNum;
+
+    const orderBy = (typeof sortBy === 'string' ? [sortBy] : sortBy || []).map(f => {
+      const [key, dir = 'asc'] = f.split(':');
+      return { [key]: dir.toLowerCase() === 'desc' ? 'desc' : 'asc' };
     });
+
+    const [data, total] = await Promise.all([
+      this.prisma.credit_Pool_Payment.findMany({ where: filters, skip, take: sizeNum, orderBy }),
+      this.prisma.credit_Pool_Payment.count({ where: filters }),
+    ]);
+
+    return { data, total, page: pageNum, size: sizeNum, totalPages: Math.ceil(total / sizeNum) };
   }
 }

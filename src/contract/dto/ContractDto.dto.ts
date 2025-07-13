@@ -1,6 +1,6 @@
 import {
   IsDate,
-  IsNumber,
+  IsNumber, IsString,
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -15,6 +15,9 @@ export class CreateContractDto {
   amount: number;
 
   @IsNumber({}, { message: 'deposit must be a number' })
-  @Min(0, { message: 'deposit must be at least 0' })
-  deposit: number;
+  @Min(0, { message: 'period must be at least 1' })
+  period: number;
+  @IsString()
+  pdfUrl: string;
+  creditPoolId: number;
 }
