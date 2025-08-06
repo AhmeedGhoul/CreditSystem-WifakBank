@@ -1,4 +1,3 @@
-// src/activity_log/activity_log.module.ts
 import { Module } from '@nestjs/common';
 import { ActivityLogService } from './activity_log.service';
 import { AuditModule } from './audit/audit.module';

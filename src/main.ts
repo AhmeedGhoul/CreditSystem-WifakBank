@@ -10,7 +10,11 @@ async function bootstrap() {
     origin: 'http://localhost:3001',
     credentials: true,
   });
-
+  if (typeof global.crypto === 'undefined' || !global.crypto?.randomUUID) {
+    Object.defineProperty(global, 'crypto', {
+      value: require('crypto'),
+    });
+  }
   const roleSeeder = app.get(RoleSeederService);
   await roleSeeder.seedRoles();
   app.use(cookieParser());

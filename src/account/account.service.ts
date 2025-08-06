@@ -10,12 +10,11 @@ export class AccountService {
   async createAccount(dto: CreateAccountDto, userId: number) {
     return this.prisma.account.create({
       data: {
-        linkedUserId: userId,
         ...dto,
+        linkedUserId: userId,
       },
     });
   }
-
   async editAccount(dto: CreateAccountDto, accountId: number, user: JwtUser) {
     const account = await this.prisma.account.findUnique({ where: { accountId:accountId } });
 
@@ -89,5 +88,19 @@ export class AccountService {
 
     return { data, total, page: pageNum, size: sizeNum, totalPages: Math.ceil(total / sizeNum) };
   }
+  async findAccountByUserId(userId: number) {
+    return this.prisma.account.findFirst({
+      where: { linkedUserId: userId },
+    });
+  }
+  async incrementBalance(userId: number, amount: number) {
+    const acc = await this.prisma.account.findFirst({ where: { linkedUserId: userId } });
+    if (!acc) throw new NotFoundException('Account missing');
+    return this.prisma.account.update({
+      where: { accountId: acc.accountId },
+      data: { balance: acc.balance + amount },
+    });
+  }
+
 
 }

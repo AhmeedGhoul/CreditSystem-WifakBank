@@ -19,13 +19,14 @@ import { RolesGuard } from '../../user/Roles.guard';
 import { Roles } from '../../decorator/roles.decorator';
 import { JwtUser } from '../../user/strategy/jwt-user.interface';
 import { CreditPoolService } from './credit_pool.service';
-import { CreateCreditPoolDto } from './dto/CreditPool.dto';
+import { CreateCreditPoolDto, SendReplacementRequestDto } from './dto/CreditPool.dto';
+import { ReplacementRequestService } from './ReplacementRequest.service';
 
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles('Admin','Client','Agent')
 @Controller('creditpool')
 export class CreditPoolController {
-  constructor(private creditPoolService: CreditPoolService) {}
+  constructor(private creditPoolService: CreditPoolService,private replacementService: ReplacementRequestService) {}
 
   @Post('add')
   @HttpCode(HttpStatus.OK)
@@ -82,6 +83,33 @@ export class CreditPoolController {
   ) {
     const user = req.user as JwtUser;
     return this.creditPoolService.removeContractFromCreditPool(contractId, user);
+  }
+  @Get('my-pools')
+  getMyCreditPools(@Request() req: ExpressRequest) {
+    const user = req.user as JwtUser;
+    return this.creditPoolService.getCreditPoolsByUser(user.userId);
+  }
+  @Delete('leave/:creditPoolId')
+  @HttpCode(HttpStatus.OK)
+  leaveCreditPool(
+    @Param('creditPoolId', ParseIntPipe) creditPoolId: number,
+    @Request() req: ExpressRequest
+  ) {
+    const user = req.user as JwtUser;
+    return this.creditPoolService.leaveCreditPool(creditPoolId, user);
+  }
+  @Post('replacement-request')
+  async sendReplacementRequest(
+    @Body() dto: SendReplacementRequestDto,
+    @Request() req,
+  ) {
+    const userId = req.user.userId;
+    return this.replacementService.sendReplacementRequest(dto.creditPoolId, dto.replacementEmail, userId);
+  }
+  @Get('confirm')
+  async confirmReplacement(@Query('token') token: string) {
+    const result = await this.replacementService.confirmReplacement(token);
+    return result; // Return success message or redirect in frontend
   }
 
 }

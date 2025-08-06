@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { Request as ExpressRequest, Response } from 'express';
-import { CreateUserDto, GrantRoleDto, UpdateUserDto, UserLoginDto } from './dto/UserDto.dto';
+import { CreateUserDto, GrantRoleDto, RequestPasswordResetDto, UpdateUserDto, UserLoginDto } from './dto/UserDto.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from './Roles.guard';
 import { Roles } from '../decorator/roles.decorator';
@@ -97,4 +97,23 @@ export class UserController {
     const hasAccess = await this.userService.userHasAccess(user.userId);
     return { hasAccess };
   }
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @HttpCode(HttpStatus.OK)
+  @Get('current-user')
+  async getUser(@Request() req: ExpressRequest) {
+    const user = req.user as JwtUser;
+    const hasAccess = await this.userService.getUser(user.userId);
+    return { hasAccess };
+  }
+  @Post('request-password-reset')
+  @HttpCode(HttpStatus.OK)
+  async requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
+    await this.userService.sendPasswordResetEmail(dto.email);
+    return { message: 'Reset email sent successfully.' };
+  }
+  @Post('reset-password')
+  async resetPassword(@Body() body: { password: string; token: string }) {
+    return this.userService.resetPassword(body.password, body.token)
+  }
+
 }

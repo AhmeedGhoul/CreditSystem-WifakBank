@@ -37,6 +37,11 @@ model User {
   Requests     Request[]
   Garents      Garent[]
   accounts     Account[]
+
+  Notification       Notification[]
+  ReplacementRequest ReplacementRequest[]
+
+  GarentInvitation GarentInvitation[]
 }
 
 model Role {
@@ -52,9 +57,30 @@ model Audit {
   auditDate   DateTime    @default(now())
   auditType   AuditType
 
-  activityLogs ActivityLog[] // One-to-many: Audit → ActivityLog[]
+  activityLogs ActivityLog[]
 
   Fraud_Case Fraud_Case[]
+}
+
+enum ReplacementRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model ReplacementRequest {
+  id                Int                      @id @default(autoincrement())
+  creditPoolId      Int
+  userId            Int
+  replacementEmail  String                   @db.VarChar(255)
+  status            ReplacementRequestStatus @default(PENDING)
+  confirmationToken String                   @unique
+  createdAt         DateTime                 @default(now())
+
+  creditPool Credit_Pool @relation(fields: [creditPoolId], references: [creditPoolId])
+  user       User        @relation(fields: [userId], references: [userId])
+
+  @@map("replacement_requests")
 }
 
 model ActivityLog {
@@ -120,10 +146,22 @@ model Request {
 
 model Credit_Pool_Payment {
   creditPoolPaymentId Int        @id @default(autoincrement())
-  date                String     @db.VarChar(50)
-  amount              String     @db.VarChar(50)
+  MaximumDate         DateTime
+  PaymentDate         DateTime
+  isPayed             Boolean    @default(false)
+  amount              Float
   contract            Contracts? @relation(fields: [contractId], references: [contractId])
   contractId          Int?
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String
+  message   String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
 }
 
 model Contracts {
@@ -131,10 +169,12 @@ model Contracts {
   contractDate DateTime @default(now())
   amount       Float
   period       Int
+  frequency    Int      @default(3)
   pdfUrl       String?
-
-  User       User? @relation(fields: [userUserId], references: [userId])
-  userUserId Int?
+  rank         Int      @default(0)
+  isCashouted  Boolean  @default(false)
+  User         User?    @relation(fields: [userUserId], references: [userId])
+  userUserId   Int?
 
   credit_Pool_Payment Credit_Pool_Payment[]
   credit_Pool         Credit_Pool?          @relation(fields: [creditPoolId], references: [creditPoolId])
@@ -142,17 +182,18 @@ model Contracts {
 }
 
 model Credit_Pool {
-  creditPoolId Int         @id @default(autoincrement())
-  maxPeople    Int         @default(0)
-  Frequency    Int         @default(1)
-  Period       Int         @default(3)
-  FinalValue   Int
-  isFull       Boolean     @default(false)
-  contracts    Contracts[]
+  creditPoolId       Int                  @id @default(autoincrement())
+  maxPeople          Int                  @default(0)
+  Frequency          Int                  @default(1)
+  Period             Int                  @default(3)
+  FinalValue         Int
+  isFull             Boolean              @default(false)
+  contracts          Contracts[]
+  ReplacementRequest ReplacementRequest[]
 }
 
 model Garent {
-  garentId    Int    @id @default(autoincrement())
+  garentId    Int    @id
   firstName   String @db.VarChar(100)
   lastName    String @db.VarChar(100)
   phoneNumber Int
@@ -160,23 +201,22 @@ model Garent {
   userUserId  Int?
 }
 
-model Account {
-  accountId      Int               @id @default(autoincrement())
-  openDate       DateTime          @default(now())
-  amount         Float             @default(0)
-  trackingNumber Int               @unique
-  linkedUserId   Int
-  user           User              @relation(fields: [linkedUserId], references: [userId])
-  payments       Account_Payment[]
+model GarentInvitation {
+  token       String   @id
+  email       String   @db.VarChar(255)
+  invitedById Int
+  invitedBy   User     @relation(fields: [invitedById], references: [userId])
+  createdAt   DateTime @default(now())
 }
 
-model Account_Payment {
-  paymentId Int      @id @default(autoincrement())
-  date      DateTime @default(now())
-  method    String   @db.VarChar(50)
-  amount    Float
-  account   Account  @relation(fields: [accountId], references: [accountId])
-  accountId Int
+model Account {
+  accountId             Int      @id @default(autoincrement())
+  openDate              DateTime @default(now())
+  balance               Float    @default(0)
+  trackingNumber        Int      @unique
+  linkedUserId          Int
+  user                  User     @relation(fields: [linkedUserId], references: [userId])
+  stripePaymentIntentId String?
 }
 
 enum UserRole {

@@ -59,11 +59,9 @@ export class CreateUserDto {
   isAccountBlocked?: boolean;
 }
 export class UserLoginDto {
-  @IsEmail()
   email: string;
-
-  @IsString()
   password: string;
+  keepMeLoggedIn: boolean;
 }
 export class UpdateUserDto {
   @IsOptional()
@@ -113,4 +111,8 @@ export class GrantRoleDto {
   @IsString()
   @IsNotEmpty()
   roleName: string;
+}
+export class RequestPasswordResetDto {
+  @IsEmail()
+  email: string;
 }

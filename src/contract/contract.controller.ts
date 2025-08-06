@@ -98,4 +98,8 @@ async addContract(
     const user = req.user as JwtUser;
     return this.contractService.editContract(dto, ContractId, user);
   }
+  @Get('ranks/:creditPoolId')
+  async getTakenRanks(@Param('creditPoolId') id: number) {
+    return this.contractService.getTakenRanks(Number(id));
+  }
 }

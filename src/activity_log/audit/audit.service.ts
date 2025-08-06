@@ -33,7 +33,7 @@ export class AuditService {
         ...auditData,
         ...(activityLogIds && {
           activityLogs: {
-            set: activityLogIds.map(id => ({ activityLogId: id })), // replace links
+            set: activityLogIds.map(id => ({ activityLogId: id })),
           },
         }),
       },
@@ -47,7 +47,6 @@ export class AuditService {
     return this.prisma.audit.delete({ where: { auditId } });
   }
 
-  // audit.service.ts
   async searchAudits(
     query: {
       startDate?: string;
@@ -87,7 +86,6 @@ export class AuditService {
       if (endDate) filters.auditDate.lte = new Date(endDate);
     }
 
-    // Handle sorting
     const sortArray =
       typeof sortBy === 'string'
         ? [sortBy]

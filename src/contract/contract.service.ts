@@ -2,12 +2,12 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtUser } from '../user/strategy/jwt-user.interface';
 import { CreateContractDto } from './dto/ContractDto.dto';
+import { CreditPoolService } from './credit_pool/credit_pool.service';
 
 @Injectable()
 export class ContractService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService,private creditPool:CreditPoolService) {}
   async createContract(dto: CreateContractDto, userId: number, pdfUrl: string) {
-    // Check if the user already joined this credit pool
     const existing = await this.prisma.contracts.findFirst({
       where: {
         userUserId: userId,
@@ -19,8 +19,7 @@ export class ContractService {
       throw new BadRequestException("You have already joined this credit pool.");
     }
 
-    // Create the contract
-    return this.prisma.contracts.create({
+    const contract = await this.prisma.contracts.create({
       data: {
         contractDate: dto.contractDate,
         amount: dto.amount,
@@ -28,8 +27,12 @@ export class ContractService {
         pdfUrl,
         userUserId: userId,
         creditPoolId: dto.creditPoolId,
+        rank:dto.rank
       },
     });
+   await this.creditPool.triggerPaymentsWhenFull(dto.creditPoolId);
+    return contract;
+
   }
 
 
@@ -123,4 +126,12 @@ export class ContractService {
       },
     });
   }
+  async getTakenRanks(creditPoolId: number): Promise<number[]> {
+    const contracts = await this.prisma.contracts.findMany({
+      where: { creditPoolId },
+      select: { rank: true },
+    });
+    return contracts.map(c => c.rank).filter(rank => rank !== 0);
+  }
+
 }

@@ -20,4 +20,5 @@ export class CreateContractDto {
   @IsString()
   pdfUrl: string;
   creditPoolId: number;
+  rank: number;
 }

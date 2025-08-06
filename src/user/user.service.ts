@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto, UserLoginDto } from './dto/UserDto.dto';
 import * as argon from 'argon2';
@@ -6,9 +6,10 @@ import { PrismaClientKnownRequestError } from 'generated/prisma/runtime/library'
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Role } from '../../generated/prisma';
+import { MailerService } from '@nestjs-modules/mailer';
 @Injectable()
 export class UserService {
-  constructor(private prisma:PrismaService,private jwt : JwtService,private config:ConfigService) {
+  constructor(private prisma:PrismaService,private jwt : JwtService,private config:ConfigService,private mailService:MailerService) {
     }
 
   async signup(dto: CreateUserDto) {
@@ -63,7 +64,25 @@ export class UserService {
     }
 
     const roleNames = user.roles.map(role => role.name);
-    return this.signToken(user.userId, roleNames); // retourne le token
+
+    return this.signToken(user.userId, roleNames, user.email, dto.keepMeLoggedIn);
+  }
+
+  async signToken(
+    userId: number,
+    roles: string[],
+    email: string,
+    keepMeLoggedIn: boolean,
+  ): Promise<{ access_token: string }> {
+    const payload = { sub: userId, roles, email };
+    const secret = this.config.get<string>('JWT_SECRET_KEY');
+
+    const token = await this.jwt.signAsync(payload, {
+      secret,
+      expiresIn: keepMeLoggedIn ? '30d' : '1h', // 30 jours ou 1 heure
+    });
+
+    return { access_token: token };
   }
 async editUser(dto:UpdateUserDto,userId:number){
     const  user=await this.prisma.user.findUnique({where:{
@@ -189,22 +208,8 @@ async deleteUser(userid:number){
       },
       include: { roles: true },
     });}
-  async signToken(userId: number, roles: string[]): Promise<{ access_token: string }> {
-    const payload = {
-      sub: userId,
-      roles,
-    };
 
-    const secret = this.config.get<string>("JWT_SECRET_KEY");
-    const token = await this.jwt.signAsync(payload, {
-      expiresIn: '1h',
-      secret,
-    });
 
-    return {
-      access_token: token,
-    };
-  }
   async userHasAccess(userId: number): Promise<boolean> {
     const request = await this.prisma.request.findFirst({
       where: {
@@ -215,6 +220,54 @@ async deleteUser(userid:number){
     });
     return !!request;
   }
+  async getUser(userId: number) {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        userId: userId,
+      },
+    });
+    return user;
+  }
+  async sendPasswordResetEmail(email: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('User with that email not found.');
+    }
 
+    // Create a password reset token with JWT
+    const payload = { sub: user.userId, email: user.email };
+    const secret = this.config.get<string>('JWT_SECRET_KEY');
+    const token = await this.jwt.signAsync(payload, {
+      expiresIn: '30m', // valid for 30 minutes
+      secret,
+    });
+    const confirmLink = `${this.config.get<string>('FRONTEND_URL')}/reset-password?token=${token}`;
+
+    await this.mailService.sendMail({
+      to: email,
+      subject: 'Password Reset Request',
+      html: `
+      <p>You requested to reset your password.</p>
+      <p>Click <a href="${confirmLink}">here</a> to reset it.</p>
+      <p>This link will expire in 30 minutes.</p>
+    `,
+    });}
+  async resetPassword(password: string, token: string) {
+    try {
+      const secret = this.config.get<string>('JWT_SECRET_KEY')
+      const decoded = await this.jwt.verifyAsync(token, { secret })
+
+      const userId = decoded.sub
+      const hash = await argon.hash(password);
+      await this.prisma.user.update({
+        where: { userId },
+        data: { password: hash },
+      })
+
+      return { message: 'Password successfully reset.' }
+    } catch (error) {
+      throw new UnauthorizedException('Invalid or expired token')
+    }
+  }
 
 }

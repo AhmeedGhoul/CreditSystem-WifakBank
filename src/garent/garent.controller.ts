@@ -8,7 +8,7 @@ import {
   Param,
   ParseIntPipe,
   Patch,
-  Post, Put, Query,
+  Post, Put, Query, Req,
   Request,
   Res,
   UseGuards,
@@ -61,5 +61,27 @@ export class GarentController {
   ) {
     const user = req.user as JwtUser;
     return this.garentService.editGarent(dto, garentId, user);
+  }
+  @Post('invite')
+  @HttpCode(HttpStatus.OK)
+  async inviteGarent(
+    @Body('email') email: string,
+    @Request() req: ExpressRequest
+  ) {
+    const user = req.user as JwtUser;
+    return this.garentService.inviteGarent(email, user.userId);
+  }
+  @Get('confirm')
+  @HttpCode(HttpStatus.OK)
+  async confirmGarent(@Query('token') token: string) {
+    return this.garentService.confirmInvitation(token);
+  }
+  @Get('has-garent')
+  async hasGarent(@Request() req: ExpressRequest): Promise<{ hasGarent: boolean }> {
+    const user = req.user as any;
+    const userId = user.id;
+
+    const hasGarent = await this.garentService.checkIfUserHasGarent(userId);
+    return { hasGarent };
   }
 }
