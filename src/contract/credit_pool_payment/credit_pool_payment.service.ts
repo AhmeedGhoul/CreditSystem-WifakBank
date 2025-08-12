@@ -321,7 +321,21 @@ export class CreditpoolpaymentService {
         } else {
           this.logger.warn(
             `❌ Insufficient funds: User ${userId} and guarantors could only cover ${totalDeducted} / ${payment.amount} DT`
+
           );
+          const account1 = await this.prisma.account.findFirst({
+            where: { linkedUserId: userId },
+          });
+          await this.prisma.account.update({
+            where: { accountId: account1!.accountId },
+            data: { balance: { decrement: payment.amount } },
+          });
+          await this.prisma.credit_Pool_Payment.update({
+            where: { creditPoolPaymentId: payment.creditPoolPaymentId },
+            data: { isPayed: true },
+          });
+
+
         }
       }
 

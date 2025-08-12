@@ -84,22 +84,17 @@ export class UserService {
 
     return { access_token: token };
   }
-async editUser(dto:UpdateUserDto,userId:number){
-    const  user=await this.prisma.user.findUnique({where:{
-      userId:userId
-      }})
-  if(!user){
-    throw new ForbiddenException("incorrect credentials")
+  async editUser(dto: UpdateUserDto, userId: number) {
+    console.log("update dto:", dto);
+    const user = await this.prisma.user.findUnique({ where: { userId } });
+    if (!user) throw new ForbiddenException("incorrect credentials");
+
+    return this.prisma.user.update({
+      where: { userId },
+      data: { ...dto },
+    });
   }
-  return this.prisma.user.update({
-    where: {
-      userId: userId
-    },
-    data: {
-      ...dto,
-    },
-  });
-}
+
 async deleteUser(userid:number){
     await this.prisma.user.delete({where:{userId:userid}});
 }
@@ -268,6 +263,67 @@ async deleteUser(userid:number){
     } catch (error) {
       throw new UnauthorizedException('Invalid or expired token')
     }
+  }
+  async getUserStats() {
+    const totalUsers = await this.prisma.user.count();
+
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    // Use groupBy to count distinct active users in last month
+    const activeUsersGrouped = await this.prisma.contracts.groupBy({
+      by: ['userUserId'],
+      where: {
+        contractDate: {
+          gte: oneMonthAgo,
+        },
+      },
+    });
+    const activeUsersLastMonth = activeUsersGrouped.length;
+
+    const totalContracts = await this.prisma.contracts.count();
+
+    const totalContractAmount = await this.prisma.contracts.aggregate({
+      _sum: {
+        amount: true,
+      },
+    });
+
+    return {
+      totalUsers,
+      activeUsersLastMonth,
+      totalContracts,
+      totalContractAmount: totalContractAmount._sum.amount ?? 0,
+    };
+  }
+  async getMonthlyPayments(userId: number): Promise<number[]> {
+    const year = new Date().getFullYear();
+
+    const payments = await this.prisma.credit_Pool_Payment.findMany({
+      where: {
+        contract: {
+          userUserId: userId,
+        },
+        isPayed: true,
+        PaymentDate: {
+          gte: new Date(`${year}-01-01`),
+          lt: new Date(`${year + 1}-01-01`),
+        },
+      },
+      select: {
+        amount: true,
+        PaymentDate: true,
+      },
+    });
+
+    const monthlyTotals = new Array(12).fill(0);
+
+    for (const payment of payments) {
+      const month = payment.PaymentDate.getMonth();
+      monthlyTotals[month] += payment.amount;
+    }
+
+    return monthlyTotals;
   }
 
 }

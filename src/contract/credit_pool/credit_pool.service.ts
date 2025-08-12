@@ -226,4 +226,20 @@ export class CreditPoolService {
     return { message: 'Successfully left the credit pool' };
   }
 
+  async findAvailablePools() {
+    return this.prisma.credit_Pool.findMany({where:{
+      isFull:false
+      }})
+  }
+
+  async getPoolsByIds(recommendedIds: number[]) {
+    return this.prisma.credit_Pool.findMany({
+      where: {
+        creditPoolId: {
+          in: recommendedIds
+        }
+      }
+    });
+  }
+
 }

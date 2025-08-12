@@ -138,4 +138,9 @@ console.log(documents)
       data: { isRequestApprovedByAuditor:true },
     });
   }
+  async findRequestByUserId(userId: number){
+   return this.prisma.request.findFirst({where:{
+       userUserId:userId
+     }})
+  }
 }

@@ -93,19 +93,6 @@ export class UpdateUserDto {
   @IsInt()
   phoneNumber?: number;
 
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  userScore?: number;
-  @IsOptional()
-  @IsEnum(CivilStatus)
-  civilStatus?: CivilStatus;
-
-  @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  dateOfBirth?: Date;
-
 }
 export class GrantRoleDto {
   @IsString()

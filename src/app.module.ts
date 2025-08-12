@@ -21,6 +21,7 @@ import { CreditPoolPaymentModule } from './contract/credit_pool_payment/credit_p
 import { ScheduleModule } from '@nestjs/schedule';
 import { NotificationModule } from './notification/notification.module';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { MLRecommendationModule } from './contract/credit_pool/ML/m-recommendation.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -48,6 +49,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
     ContractModule,
     ActivityLogModule,
     CreditPoolModule,
+    MLRecommendationModule,
     StripeModule,
     CreditPoolPaymentModule,
     NotificationModule,

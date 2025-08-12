@@ -6,6 +6,7 @@ import { DocumentModule } from './document/document.module';
 @Module({
   controllers: [RequestController],
   providers: [RequestService],
-  imports: [DocumentModule]
+  imports: [DocumentModule],
+  exports:[RequestService]
 })
 export class RequestModule {}

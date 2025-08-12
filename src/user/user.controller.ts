@@ -115,5 +115,14 @@ export class UserController {
   async resetPassword(@Body() body: { password: string; token: string }) {
     return this.userService.resetPassword(body.password, body.token)
   }
-
+  @Get('stats')
+  async getUserStats() {
+    return this.userService.getUserStats();
+  }
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Get('monthly-payments')
+  async getMonthlyPayments(@Request() req: ExpressRequest) {
+    const user = req.user as JwtUser;
+    return this.userService.getMonthlyPayments(user.userId);
+  }
 }
