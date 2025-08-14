@@ -78,10 +78,9 @@ export class GarentController {
   }
   @Get('has-garent')
   async hasGarent(@Request() req: ExpressRequest): Promise<{ hasGarent: boolean }> {
-    const user = req.user as any;
-    const userId = user.id;
+    const user = req.user as JwtUser;
 
-    const hasGarent = await this.garentService.checkIfUserHasGarent(userId);
+    const hasGarent = await this.garentService.checkIfUserHasGarent(user.userId);
     return { hasGarent };
   }
 }
