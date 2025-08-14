@@ -79,7 +79,7 @@ export class UserService {
 
     const token = await this.jwt.signAsync(payload, {
       secret,
-      expiresIn: keepMeLoggedIn ? '30d' : '1h', // 30 jours ou 1 heure
+      expiresIn: keepMeLoggedIn ? '30d' : '1h',
     });
 
     return { access_token: token };
@@ -229,11 +229,10 @@ async deleteUser(userid:number){
       throw new NotFoundException('User with that email not found.');
     }
 
-    // Create a password reset token with JWT
     const payload = { sub: user.userId, email: user.email };
     const secret = this.config.get<string>('JWT_SECRET_KEY');
     const token = await this.jwt.signAsync(payload, {
-      expiresIn: '30m', // valid for 30 minutes
+      expiresIn: '30m',
       secret,
     });
     const confirmLink = `${this.config.get<string>('FRONTEND_URL')}/reset-password?token=${token}`;
@@ -270,7 +269,6 @@ async deleteUser(userid:number){
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-    // Use groupBy to count distinct active users in last month
     const activeUsersGrouped = await this.prisma.contracts.groupBy({
       by: ['userUserId'],
       where: {

@@ -13,7 +13,6 @@ export class RequestService {
     if (!dto) throw new BadRequestException('Request body is missing');
 
     const { documents, ...requestData } = dto;
-console.log(documents)
     return this.prisma.request.create({
       data: {
         ...requestData,

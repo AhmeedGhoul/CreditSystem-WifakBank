@@ -277,10 +277,9 @@ export class CreditpoolpaymentService {
           deductionLogs.push(`👤 User ${userId} paid ${toDeduct} DT`);
         }
 
-        // If there's still amount to cover, try guarantors
         if (remainingAmount > 0) {
           const garents = await this.prisma.garent.findMany({
-            where: { userUserId: userId }, // userId is current user
+            where: { userUserId: userId },
             include: { User: true },
           });
 
@@ -306,7 +305,6 @@ export class CreditpoolpaymentService {
           }
         }
 
-        // Final check: was the full amount covered?
         if (totalDeducted >= payment.amount) {
           await this.prisma.credit_Pool_Payment.update({
             where: { creditPoolPaymentId: payment.creditPoolPaymentId },

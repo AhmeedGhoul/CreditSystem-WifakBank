@@ -30,7 +30,7 @@ import { MLRecommendationModule } from './contract/credit_pool/ML/m-recommendati
       transport: {
         host: 'smtp.gmail.com',
         port: 465,
-        secure: true, // SSL
+        secure: true,
         auth: {
           user: process.env.GMAIL_USER,
           pass: process.env.GMAIL_PASS,

@@ -109,7 +109,7 @@ export class CreditPoolController {
   @Get('confirm')
   async confirmReplacement(@Query('token') token: string) {
     const result = await this.replacementService.confirmReplacement(token);
-    return result; // Return success message or redirect in frontend
+    return result;
   }
 
 }

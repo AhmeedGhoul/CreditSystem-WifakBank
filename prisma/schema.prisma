@@ -58,8 +58,6 @@ model Audit {
   auditType   AuditType
 
   activityLogs ActivityLog[]
-
-  Fraud_Case Fraud_Case[]
 }
 
 enum ReplacementRequestStatus {
@@ -95,16 +93,6 @@ model ActivityLog {
   audit      Audit? @relation(fields: [auditId], references: [auditId])
   User       User?  @relation(fields: [userUserId], references: [userId])
   userUserId Int?
-}
-
-model Fraud_Case {
-  fraudCaseId   Int           @id @default(autoincrement())
-  fraudCaseType FraudCaseType
-  detectionDate DateTime      @default(now())
-  caseStatus    CaseStatus
-
-  audit   Audit? @relation(fields: [auditId], references: [auditId])
-  auditId Int?
 }
 
 model Document {
@@ -247,20 +235,8 @@ enum CivilStatus {
   Widow
 }
 
-enum FraudCaseType {
-  IDENTITY_THEFT
-  ACCOUNT_TAKEOVER
-  FAKE_DOCUMENT
-}
-
 enum AuditType {
   Finacial
   compliance
   Risk
-}
-
-enum CaseStatus {
-  OPEN
-  CLOSED
-  UNDER_INVESTIGATION
 }
